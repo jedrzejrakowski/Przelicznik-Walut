@@ -10,6 +10,7 @@ on:
       - nbp.py
       - icon.ico
       - requirements.txt
+      - PrzelicznikWalut.html
       - .github/workflows/build-windows-exe.yml
 
 permissions:
