@@ -43,7 +43,7 @@ if errorlevel 1 (
 
 echo.
 echo [4/4] Kompilacja do pliku .exe...
-".venv\Scripts\pyinstaller.exe" --noconfirm --onefile --windowed --name PrzelicznikWalut app.py
+".venv\Scripts\pyinstaller.exe" --noconfirm --onefile --windowed --name PrzelicznikWalut --icon icon.ico --add-data "icon.ico;." app.py
 if errorlevel 1 (
     echo.
     echo BLAD: Kompilacja nie powiodla sie.

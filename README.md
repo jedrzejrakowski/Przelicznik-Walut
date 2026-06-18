@@ -79,3 +79,5 @@ python test_nbp.py
 | `test_nbp.py` | Testy logiki |
 | `build_exe.bat` | Budowanie `.exe` bez uprawnień administratora |
 | `requirements.txt` | Zależności |
+| `icon.ico` / `icon.png` | Ikona aplikacji (okno + plik `.exe`) |
+| `make_icon.py` | Skrypt generujący ikonę (wymaga `pillow`) |

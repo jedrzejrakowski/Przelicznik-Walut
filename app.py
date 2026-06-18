@@ -10,9 +10,11 @@ Uruchomienie:  python app.py
 from __future__ import annotations
 
 import datetime as _dt
+import os
 import sys
 
 from PyQt6.QtCore import QDate, Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -30,6 +32,12 @@ from PyQt6.QtWidgets import (
 )
 
 import nbp
+
+
+def _resource_path(name: str) -> str:
+    """Zwraca sciezke do zasobu – dziala tez po spakowaniu PyInstallerem."""
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, name)
 
 
 class RateWorker(QThread):
@@ -55,6 +63,9 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Przelicznik walut na PLN – kurs NBP")
+        icon_path = _resource_path("icon.ico")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
         self.setMinimumWidth(460)
         self._worker: RateWorker | None = None
         self._last_result: nbp.RateResult | None = None
@@ -187,6 +198,9 @@ class MainWindow(QMainWindow):
 
 def main() -> int:
     app = QApplication(sys.argv)
+    icon_path = _resource_path("icon.ico")
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
     window = MainWindow()
     window.show()
     return app.exec()
