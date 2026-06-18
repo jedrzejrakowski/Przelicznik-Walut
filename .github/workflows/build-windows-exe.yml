@@ -47,6 +47,13 @@ jobs:
           tag_name: windows-build
           name: Przelicznik Walut - wersja Windows
           body: |
-            Gotowy plik **PrzelicznikWalut.exe** dla Windows.
-            Pobierz, kliknij dwukrotnie - nie wymaga instalacji Pythona ani uprawnien administratora.
-          files: dist/PrzelicznikWalut.exe
+            Dwie wersje do pobrania:
+
+            * **PrzelicznikWalut.html** - wersja przegladarkowa (ZALECANA na komputery firmowe).
+              Otwierasz dwuklikiem w Edge/Chrome. Nie wymaga instalacji ani uprawnien admina
+              i NIE jest blokowana przez antywirus.
+            * **PrzelicznikWalut.exe** - wersja desktopowa dla Windows. Uwaga: antywirus moze
+              ja blednie oznaczyc (false positive PyInstallera).
+          files: |
+            dist/PrzelicznikWalut.exe
+            PrzelicznikWalut.html
