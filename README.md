@@ -1,8 +1,16 @@
 # Przelicznik walut na PLN (kurs NBP)
 
-Aplikacja okienkowa (PyQt6) przeliczająca kwotę w walucie obcej na złotówki
-według **średniego kursu NBP (tabela A)**. Obsługiwane waluty: **EUR, USD,
-GBP, CHF**.
+Aplikacja przeliczająca kwotę w walucie obcej na złotówki według **średniego
+kursu NBP (tabela A)**. Obsługiwane waluty: **EUR, USD, GBP, CHF**.
+
+Dostępna w dwóch wariantach:
+
+- **`PrzelicznikWalut.html`** – wersja przeglądarkowa. Otwierasz dwuklikiem w
+  Edge/Chrome. **Nie wymaga instalacji, Pythona ani uprawnień administratora**
+  i nie jest blokowana przez antywirus (to nie jest plik `.exe`). Zalecana na
+  komputerach firmowych z ograniczeniami.
+- **`app.py`** – wersja desktopowa w PyQt6 (można skompilować do `.exe`).
+
 
 Program pokazuje:
 - przeliczoną kwotę w **PLN**,

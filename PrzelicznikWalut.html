@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Przelicznik walut na PLN – kurs NBP</title>
+<style>
+  :root { --green:#1a6e1a; --green-d:#155a15; --bg:#f4f6f4; --line:#d9ddd9; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI",Arial,sans-serif; background:var(--bg);
+         color:#1b1b1b; display:flex; justify-content:center; padding:24px; }
+  .card { background:#fff; width:100%; max-width:480px; border-radius:14px;
+          box-shadow:0 6px 24px rgba(0,0,0,.12); overflow:hidden; }
+  .head { background:var(--green); color:#fff; padding:18px 22px; display:flex; align-items:center; gap:12px; }
+  .head .ico { width:34px; height:34px; flex:0 0 auto; }
+  .head h1 { font-size:18px; margin:0; font-weight:600; }
+  .body { padding:20px 22px; }
+  label { display:block; font-size:13px; color:#555; margin:14px 0 5px; font-weight:600; }
+  input, select { width:100%; padding:11px 12px; font-size:15px; border:1px solid var(--line);
+                  border-radius:8px; background:#fff; }
+  input:focus, select:focus { outline:none; border-color:var(--green); }
+  button { width:100%; margin-top:18px; padding:13px; font-size:16px; font-weight:600;
+           color:#fff; background:var(--green); border:none; border-radius:8px; cursor:pointer; }
+  button:hover { background:var(--green-d); }
+  button:disabled { opacity:.6; cursor:default; }
+  .result { margin-top:18px; border:1px solid var(--line); border-radius:10px; padding:16px;
+            display:none; }
+  .result .pln { font-size:24px; font-weight:700; color:var(--green); }
+  .result .row { font-size:14px; color:#333; margin-top:8px; }
+  .result hr { border:none; border-top:1px solid var(--line); margin:12px 0; }
+  .status { margin-top:12px; font-size:13px; color:#666; min-height:18px; }
+  .error { color:#b00020; }
+  .manual { display:none; margin-top:14px; padding:14px; border:1px dashed #c8a000;
+            border-radius:10px; background:#fffbe6; }
+  .manual p { margin:0 0 8px; font-size:13px; color:#7a5b00; }
+  .note { margin-top:16px; font-size:12px; color:#888; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <svg class="ico" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="8" width="240" height="240" rx="48" fill="#ffffff" opacity="0.18"/>
+      <line x1="70" y1="92" x2="186" y2="92" stroke="#fff" stroke-width="12"/>
+      <polygon points="70,92 96,72 96,112" fill="#fff"/>
+      <line x1="70" y1="128" x2="186" y2="128" stroke="#fff" stroke-width="12"/>
+      <polygon points="186,128 160,108 160,148" fill="#fff"/>
+      <text x="128" y="205" font-size="86" font-weight="700" fill="#fff" text-anchor="middle" font-family="Arial">zł</text>
+    </svg>
+    <h1>Przelicznik walut na PLN</h1>
+  </div>
+  <div class="body">
+    <label for="amount">Kwota w walucie obcej</label>
+    <input id="amount" type="number" min="0" step="0.01" value="100">
+
+    <label for="currency">Waluta</label>
+    <select id="currency">
+      <option value="EUR">EUR – Euro</option>
+      <option value="USD">USD – Dolar amerykański</option>
+      <option value="GBP">GBP – Funt brytyjski</option>
+      <option value="CHF">CHF – Frank szwajcarski</option>
+    </select>
+
+    <label for="date">Data zdarzenia gospodarczego</label>
+    <input id="date" type="date">
+
+    <button id="go">Przelicz</button>
+
+    <div class="status" id="status"></div>
+
+    <div class="manual" id="manual">
+      <p>Nie udało się pobrać kursu z NBP (np. brak dostępu do api.nbp.pl w sieci
+         firmowej). Możesz wpisać kurs ręcznie – np. z tabeli NBP dla
+         <b id="manualDate"></b>:</p>
+      <label for="manualRate">Kurs ręczny (PLN za 1 jednostkę)</label>
+      <input id="manualRate" type="number" min="0" step="0.0001" placeholder="np. 4,3215">
+      <button id="manualGo" style="margin-top:10px">Przelicz z ręcznym kursem</button>
+    </div>
+
+    <div class="result" id="result">
+      <div class="pln" id="pln">—</div>
+      <hr>
+      <div class="row" id="rate">Kurs: —</div>
+      <div class="row" id="rdate">Data kursu: —</div>
+      <div class="row" id="table">Tabela NBP: —</div>
+    </div>
+
+    <div class="note">
+      Stosowany jest średni kurs NBP (tabela A) z dnia poprzedzającego zdarzenie.
+      Jeśli dzień poprzedzający to sobota lub niedziela, brany jest kurs z ostatniego
+      dnia roboczego poprzedniego tygodnia (a w razie święta – wcześniejszego dnia roboczego).
+    </div>
+  </div>
+</div>
+
+<script>
+const NAMES = { EUR:"Euro", USD:"Dolar amerykański", GBP:"Funt brytyjski", CHF:"Frank szwajcarski" };
+const MAX_LOOKBACK = 10;
+
+const $ = id => document.getElementById(id);
+
+// Format daty jako YYYY-MM-DD (lokalnie, bez przesuniec strefy czasowej).
+function iso(d){
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+// Reguła wyboru daty: dzień poprzedzający; sobota/niedziela -> cofamy do piątku.
+function selectRateDate(event){
+  const d = new Date(event.getFullYear(), event.getMonth(), event.getDate());
+  d.setDate(d.getDate() - 1);
+  while (d.getDay() === 0 || d.getDay() === 6) {  // 0=niedziela, 6=sobota
+    d.setDate(d.getDate() - 1);
+  }
+  return d;
+}
+
+function prevBusinessDay(d){
+  const x = new Date(d);
+  x.setDate(x.getDate() - 1);
+  while (x.getDay() === 0 || x.getDay() === 6) x.setDate(x.getDate() - 1);
+  return x;
+}
+
+async function fetchSingle(code, date){
+  const url = `https://api.nbp.pl/api/exchangerates/rates/a/${code.toLowerCase()}/${iso(date)}/?format=json`;
+  const r = await fetch(url, { headers: { "Accept":"application/json" } });
+  if (r.status === 404) return null;            // brak danych (np. święto)
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+
+async function fetchRate(code, eventDate){
+  const requested = selectRateDate(eventDate);
+  let probe = requested;
+  for (let i=0; i<MAX_LOOKBACK; i++){
+    const data = await fetchSingle(code, probe);
+    if (data){
+      const info = data.rates[0];
+      return { rate:info.mid, effectiveDate:info.effectiveDate, table:info.no, requested:iso(requested) };
+    }
+    probe = prevBusinessDay(probe);
+  }
+  throw new Error("Brak notowania w okolicach " + iso(requested));
+}
+
+// Przeliczenie z zaokragleniem polowek w gore (jak dla kwot pienieznych).
+function toPln(amount, rate){
+  return Math.round((amount * rate + Number.EPSILON) * 100) / 100;
+}
+
+function fmt(n){
+  return n.toLocaleString("pl-PL", { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function showResult(code, amount, rate, effectiveDate, table, requested){
+  $("pln").textContent = `${fmt(amount)} ${code}  =  ${fmt(toPln(amount, rate))} PLN`;
+  $("rate").textContent = `Kurs średni NBP: 1 ${code} = ${Number(rate).toFixed(4)} PLN`;
+  $("rdate").textContent = `Data kursu: ${effectiveDate}` + (requested ? ` (wyznaczony dzień: ${requested})` : "");
+  $("table").textContent = table ? `Tabela NBP: ${table}` : "Kurs wpisany ręcznie";
+  $("result").style.display = "block";
+}
+
+function currentInputs(){
+  const amount = parseFloat($("amount").value);
+  const code = $("currency").value;
+  const [y,m,d] = $("date").value.split("-").map(Number);
+  const eventDate = new Date(y, m-1, d);
+  return { amount, code, eventDate };
+}
+
+$("go").addEventListener("click", async () => {
+  const { amount, code, eventDate } = currentInputs();
+  if (!(amount > 0)) { $("status").innerHTML = '<span class="error">Podaj kwotę większą od zera.</span>'; return; }
+
+  $("go").disabled = true;
+  $("manual").style.display = "none";
+  $("status").textContent = "Pobieranie kursu z NBP…";
+  try {
+    const r = await fetchRate(code, eventDate);
+    showResult(code, amount, r.rate, r.effectiveDate, r.table, r.requested);
+    $("status").textContent = "Gotowe.";
+  } catch (e){
+    $("status").innerHTML = '<span class="error">Nie udało się pobrać kursu: ' + e.message + '</span>';
+    $("manualDate").textContent = iso(selectRateDate(eventDate));
+    $("manual").style.display = "block";
+  } finally {
+    $("go").disabled = false;
+  }
+});
+
+$("manualGo").addEventListener("click", () => {
+  const { amount, code, eventDate } = currentInputs();
+  const rate = parseFloat($("manualRate").value);
+  if (!(amount > 0)) { $("status").innerHTML = '<span class="error">Podaj kwotę większą od zera.</span>'; return; }
+  if (!(rate > 0)) { $("status").innerHTML = '<span class="error">Podaj poprawny kurs.</span>'; return; }
+  showResult(code, amount, rate, iso(selectRateDate(eventDate)), null, null);
+  $("status").textContent = "Przeliczono z kursem wpisanym ręcznie.";
+});
+
+// Domyslnie dzisiejsza data, bez mozliwosci wyboru przyszlosci.
+(function init(){
+  const today = new Date();
+  $("date").value = iso(today);
+  $("date").max = iso(today);
+})();
+</script>
+</body>
+</html>
