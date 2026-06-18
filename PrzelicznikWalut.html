@@ -5,66 +5,160 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Przelicznik walut na PLN – kurs NBP</title>
 <style>
-  :root { --green:#1a6e1a; --green-d:#155a15; --bg:#f4f6f4; --line:#d9ddd9; }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:"Segoe UI",Arial,sans-serif; background:var(--bg);
-         color:#1b1b1b; display:flex; justify-content:center; padding:24px; }
-  .card { background:#fff; width:100%; max-width:480px; border-radius:14px;
-          box-shadow:0 6px 24px rgba(0,0,0,.12); overflow:hidden; }
-  .head { background:var(--green); color:#fff; padding:18px 22px; display:flex; align-items:center; gap:12px; }
-  .head .ico { width:34px; height:34px; flex:0 0 auto; }
-  .head h1 { font-size:18px; margin:0; font-weight:600; }
-  .body { padding:20px 22px; }
-  label { display:block; font-size:13px; color:#555; margin:14px 0 5px; font-weight:600; }
-  input, select { width:100%; padding:11px 12px; font-size:15px; border:1px solid var(--line);
-                  border-radius:8px; background:#fff; }
-  input:focus, select:focus { outline:none; border-color:var(--green); }
-  button { width:100%; margin-top:18px; padding:13px; font-size:16px; font-weight:600;
-           color:#fff; background:var(--green); border:none; border-radius:8px; cursor:pointer; }
-  button:hover { background:var(--green-d); }
-  button:disabled { opacity:.6; cursor:default; }
-  .result { margin-top:18px; border:1px solid var(--line); border-radius:10px; padding:16px;
-            display:none; }
-  .result .pln { font-size:24px; font-weight:700; color:var(--green); }
-  .result .row { font-size:14px; color:#333; margin-top:8px; }
-  .result hr { border:none; border-top:1px solid var(--line); margin:12px 0; }
-  .status { margin-top:12px; font-size:13px; color:#666; min-height:18px; }
-  .error { color:#b00020; }
-  .manual { display:none; margin-top:14px; padding:14px; border:1px dashed #c8a000;
-            border-radius:10px; background:#fffbe6; }
-  .manual p { margin:0 0 8px; font-size:13px; color:#7a5b00; }
-  .note { margin-top:16px; font-size:12px; color:#888; line-height:1.5; }
+  :root{
+    --g1:#0e7a4f; --g2:#13a06a; --ink:#14241d; --muted:#6b7b73;
+    --line:#e3e8e5; --bg1:#eef3f0; --bg2:#e2ece7; --accent:#0e7a4f;
+    --card:#ffffff; --soft:#f5f8f6; --danger:#b00020; --warn:#9a6b00;
+    --shadow:0 20px 50px rgba(14,122,79,.16), 0 4px 12px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box; -webkit-font-smoothing:antialiased;}
+  html,body{height:100%;}
+  body{
+    margin:0; min-height:100%;
+    font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #d6efe2 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #d2ece0 0%, transparent 55%),
+      linear-gradient(160deg,var(--bg1),var(--bg2));
+    display:flex; align-items:center; justify-content:center; padding:28px;
+  }
+  .card{
+    width:100%; max-width:500px; background:var(--card);
+    border-radius:22px; box-shadow:var(--shadow); overflow:hidden;
+    border:1px solid rgba(255,255,255,.6);
+  }
+  /* Nagłówek */
+  .head{
+    position:relative; padding:26px 28px 30px;
+    background:linear-gradient(135deg,var(--g1),var(--g2));
+    color:#fff; overflow:hidden;
+  }
+  .head::after{
+    content:""; position:absolute; right:-60px; top:-60px;
+    width:220px; height:220px; border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.22), transparent 70%);
+  }
+  .brand{display:flex; align-items:center; gap:14px; position:relative; z-index:1;}
+  .logo{
+    width:52px; height:52px; flex:0 0 auto; border-radius:15px;
+    background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,.25);
+  }
+  .logo svg{width:34px; height:34px;}
+  .brand h1{font-size:21px; margin:0; font-weight:700; letter-spacing:.2px;}
+  .brand p{margin:3px 0 0; font-size:13px; opacity:.9;}
+  /* Treść */
+  .body{padding:24px 28px 28px;}
+  .field{margin-top:18px;}
+  .field:first-child{margin-top:0;}
+  .label{display:block; font-size:12.5px; font-weight:700; color:var(--muted);
+         text-transform:uppercase; letter-spacing:.6px; margin-bottom:9px;}
+  .amount-wrap{position:relative;}
+  .amount-wrap .cur{position:absolute; right:16px; top:50%; transform:translateY(-50%);
+                    font-weight:700; color:var(--accent); font-size:16px; pointer-events:none;}
+  input[type=number], input[type=date]{
+    width:100%; padding:14px 16px; font-size:17px; font-weight:600; color:var(--ink);
+    border:1.5px solid var(--line); border-radius:13px; background:var(--soft);
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  input[type=number]{padding-right:54px;}
+  input:focus{outline:none; border-color:var(--accent); background:#fff;
+              box-shadow:0 0 0 4px rgba(19,160,106,.14);}
+  /* Wybór waluty – segmentowane przyciski */
+  .pills{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .pill{
+    border:1.5px solid var(--line); background:var(--soft); border-radius:13px;
+    padding:12px 4px 10px; cursor:pointer; text-align:center; transition:all .15s;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  .pill .sym{font-size:19px; font-weight:800; line-height:1; color:var(--muted);}
+  .pill .code{font-size:12px; font-weight:700; color:var(--muted); letter-spacing:.5px;}
+  .pill:hover{border-color:#bcd6c9;}
+  .pill.active{border-color:var(--accent); background:#eaf6f0;}
+  .pill.active .sym, .pill.active .code{color:var(--accent);}
+  /* Przycisk */
+  .btn{
+    width:100%; margin-top:24px; padding:15px; font-size:16.5px; font-weight:700; color:#fff;
+    background:linear-gradient(135deg,var(--g1),var(--g2)); border:none; border-radius:13px;
+    cursor:pointer; letter-spacing:.3px; box-shadow:0 10px 22px rgba(14,122,79,.28);
+    transition:transform .08s, box-shadow .15s, opacity .15s;
+  }
+  .btn:hover{box-shadow:0 14px 28px rgba(14,122,79,.36);}
+  .btn:active{transform:translateY(1px);}
+  .btn:disabled{opacity:.6; cursor:default; box-shadow:none;}
+  .spin{display:inline-block; width:16px; height:16px; margin-right:8px; vertical-align:-3px;
+        border:2.5px solid rgba(255,255,255,.5); border-top-color:#fff; border-radius:50%;
+        animation:rot .7s linear infinite;}
+  @keyframes rot{to{transform:rotate(360deg);}}
+  /* Wynik */
+  .result{margin-top:22px; border-radius:16px; padding:0; overflow:hidden;
+          border:1.5px solid var(--line); display:none;}
+  .result .top{background:linear-gradient(135deg,#0e7a4f,#13a06a); color:#fff; padding:18px 20px;}
+  .result .top .small{font-size:12.5px; opacity:.85; margin-bottom:4px; letter-spacing:.4px;}
+  .result .pln{font-size:30px; font-weight:800; letter-spacing:.3px; line-height:1.1;}
+  .result .meta{padding:14px 20px; background:#fff;}
+  .result .line{display:flex; justify-content:space-between; gap:12px; font-size:14px;
+               padding:6px 0; border-bottom:1px dashed var(--line);}
+  .result .line:last-child{border-bottom:none;}
+  .result .line .k{color:var(--muted);}
+  .result .line .v{font-weight:700; text-align:right;}
+  .status{margin-top:14px; font-size:13.5px; color:var(--muted); min-height:18px; text-align:center;}
+  .status.error{color:var(--danger);}
+  /* Ręczny kurs */
+  .manual{display:none; margin-top:16px; padding:16px; border:1.5px dashed #e0c352;
+          border-radius:14px; background:#fffbeb;}
+  .manual p{margin:0 0 10px; font-size:13px; color:var(--warn); line-height:1.5;}
+  .manual .btn{margin-top:12px; background:linear-gradient(135deg,#caa12a,#e0c352);
+               box-shadow:0 10px 22px rgba(202,161,42,.28);}
+  .foot{margin-top:18px; font-size:11.5px; color:#9aa8a1; line-height:1.6; text-align:center;}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="head">
-    <svg class="ico" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-      <rect x="8" y="8" width="240" height="240" rx="48" fill="#ffffff" opacity="0.18"/>
-      <line x1="70" y1="92" x2="186" y2="92" stroke="#fff" stroke-width="12"/>
-      <polygon points="70,92 96,72 96,112" fill="#fff"/>
-      <line x1="70" y1="128" x2="186" y2="128" stroke="#fff" stroke-width="12"/>
-      <polygon points="186,128 160,108 160,148" fill="#fff"/>
-      <text x="128" y="205" font-size="86" font-weight="700" fill="#fff" text-anchor="middle" font-family="Arial">zł</text>
-    </svg>
-    <h1>Przelicznik walut na PLN</h1>
+    <div class="brand">
+      <span class="logo">
+        <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+          <line x1="64" y1="92" x2="190" y2="92" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+          <polygon points="64,92 92,70 92,114" fill="#fff"/>
+          <line x1="64" y1="140" x2="190" y2="140" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+          <polygon points="190,140 162,118 162,162" fill="#fff"/>
+          <text x="128" y="226" font-size="74" font-weight="800" fill="#fff" text-anchor="middle" font-family="Arial">zł</text>
+        </svg>
+      </span>
+      <div>
+        <h1>Przelicznik walut</h1>
+        <p>Przeliczanie na PLN według średniego kursu NBP</p>
+      </div>
+    </div>
   </div>
+
   <div class="body">
-    <label for="amount">Kwota w walucie obcej</label>
-    <input id="amount" type="number" min="0" step="0.01" value="100">
+    <div class="field">
+      <label class="label" for="amount">Kwota w walucie obcej</label>
+      <div class="amount-wrap">
+        <input id="amount" type="number" min="0" step="0.01" value="100" inputmode="decimal">
+        <span class="cur" id="curBadge">EUR</span>
+      </div>
+    </div>
 
-    <label for="currency">Waluta</label>
-    <select id="currency">
-      <option value="EUR">EUR – Euro</option>
-      <option value="USD">USD – Dolar amerykański</option>
-      <option value="GBP">GBP – Funt brytyjski</option>
-      <option value="CHF">CHF – Frank szwajcarski</option>
-    </select>
+    <div class="field">
+      <span class="label">Waluta</span>
+      <div class="pills" id="pills">
+        <div class="pill active" data-code="EUR"><span class="sym">€</span><span class="code">EUR</span></div>
+        <div class="pill" data-code="USD"><span class="sym">$</span><span class="code">USD</span></div>
+        <div class="pill" data-code="GBP"><span class="sym">£</span><span class="code">GBP</span></div>
+        <div class="pill" data-code="CHF"><span class="sym">₣</span><span class="code">CHF</span></div>
+      </div>
+    </div>
 
-    <label for="date">Data zdarzenia gospodarczego</label>
-    <input id="date" type="date">
+    <div class="field">
+      <label class="label" for="date">Data zdarzenia gospodarczego</label>
+      <input id="date" type="date">
+    </div>
 
-    <button id="go">Przelicz</button>
+    <button class="btn" id="go">Przelicz na PLN</button>
 
     <div class="status" id="status"></div>
 
@@ -72,23 +166,28 @@
       <p>Nie udało się pobrać kursu z NBP (np. brak dostępu do api.nbp.pl w sieci
          firmowej). Możesz wpisać kurs ręcznie – np. z tabeli NBP dla
          <b id="manualDate"></b>:</p>
-      <label for="manualRate">Kurs ręczny (PLN za 1 jednostkę)</label>
-      <input id="manualRate" type="number" min="0" step="0.0001" placeholder="np. 4,3215">
-      <button id="manualGo" style="margin-top:10px">Przelicz z ręcznym kursem</button>
+      <label class="label" for="manualRate">Kurs ręczny (PLN za 1 jednostkę)</label>
+      <input id="manualRate" type="number" min="0" step="0.0001" placeholder="np. 4,3215" inputmode="decimal">
+      <button class="btn" id="manualGo">Przelicz z ręcznym kursem</button>
     </div>
 
     <div class="result" id="result">
-      <div class="pln" id="pln">—</div>
-      <hr>
-      <div class="row" id="rate">Kurs: —</div>
-      <div class="row" id="rdate">Data kursu: —</div>
-      <div class="row" id="table">Tabela NBP: —</div>
+      <div class="top">
+        <div class="small">Kwota w złotówkach</div>
+        <div class="pln" id="pln">—</div>
+      </div>
+      <div class="meta">
+        <div class="line"><span class="k">Kurs średni NBP</span><span class="v" id="rate">—</span></div>
+        <div class="line"><span class="k">Data kursu</span><span class="v" id="rdate">—</span></div>
+        <div class="line"><span class="k">Wyznaczony dzień</span><span class="v" id="reqdate">—</span></div>
+        <div class="line"><span class="k">Tabela NBP</span><span class="v" id="table">—</span></div>
+      </div>
     </div>
 
-    <div class="note">
+    <div class="foot">
       Stosowany jest średni kurs NBP (tabela A) z dnia poprzedzającego zdarzenie.
-      Jeśli dzień poprzedzający to sobota lub niedziela, brany jest kurs z ostatniego
-      dnia roboczego poprzedniego tygodnia (a w razie święta – wcześniejszego dnia roboczego).
+      Jeśli to sobota lub niedziela – kurs z ostatniego dnia roboczego poprzedniego
+      tygodnia (a w razie święta – wcześniejszego dnia roboczego).
     </div>
   </div>
 </div>
@@ -96,26 +195,23 @@
 <script>
 const NAMES = { EUR:"Euro", USD:"Dolar amerykański", GBP:"Funt brytyjski", CHF:"Frank szwajcarski" };
 const MAX_LOOKBACK = 10;
+let selectedCode = "EUR";
 
 const $ = id => document.getElementById(id);
 
-// Format daty jako YYYY-MM-DD (lokalnie, bez przesuniec strefy czasowej).
 function iso(d){
   const m = String(d.getMonth()+1).padStart(2,"0");
   const day = String(d.getDate()).padStart(2,"0");
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
-// Reguła wyboru daty: dzień poprzedzający; sobota/niedziela -> cofamy do piątku.
+// Reguła: dzień poprzedzający; sobota/niedziela -> cofamy do piątku.
 function selectRateDate(event){
   const d = new Date(event.getFullYear(), event.getMonth(), event.getDate());
   d.setDate(d.getDate() - 1);
-  while (d.getDay() === 0 || d.getDay() === 6) {  // 0=niedziela, 6=sobota
-    d.setDate(d.getDate() - 1);
-  }
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
   return d;
 }
-
 function prevBusinessDay(d){
   const x = new Date(d);
   x.setDate(x.getDate() - 1);
@@ -126,11 +222,10 @@ function prevBusinessDay(d){
 async function fetchSingle(code, date){
   const url = `https://api.nbp.pl/api/exchangerates/rates/a/${code.toLowerCase()}/${iso(date)}/?format=json`;
   const r = await fetch(url, { headers: { "Accept":"application/json" } });
-  if (r.status === 404) return null;            // brak danych (np. święto)
+  if (r.status === 404) return null;
   if (!r.ok) throw new Error("HTTP " + r.status);
   return r.json();
 }
-
 async function fetchRate(code, eventDate){
   const requested = selectRateDate(eventDate);
   let probe = requested;
@@ -145,61 +240,66 @@ async function fetchRate(code, eventDate){
   throw new Error("Brak notowania w okolicach " + iso(requested));
 }
 
-// Przeliczenie z zaokragleniem polowek w gore (jak dla kwot pienieznych).
-function toPln(amount, rate){
-  return Math.round((amount * rate + Number.EPSILON) * 100) / 100;
-}
-
-function fmt(n){
-  return n.toLocaleString("pl-PL", { minimumFractionDigits:2, maximumFractionDigits:2 });
-}
+function toPln(amount, rate){ return Math.round((amount*rate + Number.EPSILON)*100)/100; }
+function fmt(n){ return n.toLocaleString("pl-PL", {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
 function showResult(code, amount, rate, effectiveDate, table, requested){
-  $("pln").textContent = `${fmt(amount)} ${code}  =  ${fmt(toPln(amount, rate))} PLN`;
-  $("rate").textContent = `Kurs średni NBP: 1 ${code} = ${Number(rate).toFixed(4)} PLN`;
-  $("rdate").textContent = `Data kursu: ${effectiveDate}` + (requested ? ` (wyznaczony dzień: ${requested})` : "");
-  $("table").textContent = table ? `Tabela NBP: ${table}` : "Kurs wpisany ręcznie";
+  $("pln").textContent = `${fmt(toPln(amount, rate))} PLN`;
+  $("rate").textContent = `1 ${code} = ${Number(rate).toFixed(4)} PLN`;
+  $("rdate").textContent = effectiveDate;
+  $("reqdate").textContent = requested || "—";
+  $("table").textContent = table || "kurs ręczny";
   $("result").style.display = "block";
 }
 
 function currentInputs(){
   const amount = parseFloat($("amount").value);
-  const code = $("currency").value;
   const [y,m,d] = $("date").value.split("-").map(Number);
-  const eventDate = new Date(y, m-1, d);
-  return { amount, code, eventDate };
+  return { amount, code:selectedCode, eventDate:new Date(y, m-1, d) };
 }
+
+$("pills").addEventListener("click", e => {
+  const pill = e.target.closest(".pill");
+  if (!pill) return;
+  document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+  pill.classList.add("active");
+  selectedCode = pill.dataset.code;
+  $("curBadge").textContent = selectedCode;
+});
 
 $("go").addEventListener("click", async () => {
   const { amount, code, eventDate } = currentInputs();
-  if (!(amount > 0)) { $("status").innerHTML = '<span class="error">Podaj kwotę większą od zera.</span>'; return; }
+  if (!(amount > 0)) { $("status").className="status error"; $("status").textContent="Podaj kwotę większą od zera."; return; }
 
   $("go").disabled = true;
   $("manual").style.display = "none";
-  $("status").textContent = "Pobieranie kursu z NBP…";
+  $("status").className = "status";
+  $("go").innerHTML = '<span class="spin"></span>Pobieranie kursu…';
   try {
     const r = await fetchRate(code, eventDate);
     showResult(code, amount, r.rate, r.effectiveDate, r.table, r.requested);
     $("status").textContent = "Gotowe.";
   } catch (e){
-    $("status").innerHTML = '<span class="error">Nie udało się pobrać kursu: ' + e.message + '</span>';
+    $("status").className = "status error";
+    $("status").textContent = "Nie udało się pobrać kursu: " + e.message;
     $("manualDate").textContent = iso(selectRateDate(eventDate));
     $("manual").style.display = "block";
   } finally {
     $("go").disabled = false;
+    $("go").textContent = "Przelicz na PLN";
   }
 });
 
 $("manualGo").addEventListener("click", () => {
   const { amount, code, eventDate } = currentInputs();
   const rate = parseFloat($("manualRate").value);
-  if (!(amount > 0)) { $("status").innerHTML = '<span class="error">Podaj kwotę większą od zera.</span>'; return; }
-  if (!(rate > 0)) { $("status").innerHTML = '<span class="error">Podaj poprawny kurs.</span>'; return; }
+  if (!(amount > 0)) { $("status").className="status error"; $("status").textContent="Podaj kwotę większą od zera."; return; }
+  if (!(rate > 0)) { $("status").className="status error"; $("status").textContent="Podaj poprawny kurs."; return; }
   showResult(code, amount, rate, iso(selectRateDate(eventDate)), null, null);
+  $("status").className = "status";
   $("status").textContent = "Przeliczono z kursem wpisanym ręcznie.";
 });
 
-// Domyslnie dzisiejsza data, bez mozliwosci wyboru przyszlosci.
 (function init(){
   const today = new Date();
   $("date").value = iso(today);
